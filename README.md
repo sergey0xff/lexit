@@ -1,7 +1,7 @@
 # Lexit
 Lexit is an open source lexer generator written in Python3.6 using new features like `NamedTuple`, type hinting and `__init_subclass__` hook.
 
-### Simple example
+## Simple example
 ```python
 from typing import Iterable
 
@@ -28,7 +28,37 @@ Token(type='ADD', value='+', line=1, column=3)
 Token(type='NUMBER', value='2', line=1, column=5)
 ```
 
-### JSON lexer example 
+## Requirements
+* The only requirement is Python3.6+
+* For testing the `pytest` library is used
+
+## Installation
+```bash
+pip install lexit
+```
+
+## Error handling
+```
+try:
+    tokens = list(JsonLexer.lex('${"hello": "world"}'))
+except LexerError as e:
+    print(e.pretty())
+    exit(1)
+
+# The error message is self-describing
+# It shows what happened and where 
+No match for character '$' in line 1 column 1
+${"hello": "world"}
+^
+```
+
+## Design decisions
+* Should be easy to use
+* Longest match priority (`++` always wins over `+` despite of the order in which the tokens are defined in the lexer class)
+* Self-describing errors for humans (it's should be obvious what happened and where)
+
+## More examples
+### JSON lexer
 ```python
 from lexit import Lexer
 
@@ -52,31 +82,3 @@ class JsonLexer(Lexer):
 tokens = list(JsonLexer.lex('{"hello": "world"}'))
 ``` 
 
-### Requirements
-* The only requirement is Python3.6+
-* For testing the `pytest` library is used
-
-### Installation
-```bash
-pip install lexit
-```
-
-### Error handling
-```
-try:
-    tokens = list(JsonLexer.lex('${"hello": "world"}'))
-except LexerError as e:
-    print(e.pretty())
-    exit(1)
-
-# The error message is self-describing
-# It shows what happened and where 
-No match for character '$' in line 1 column 1
-${"hello": "world"}
-^
-```
-
-### Design decisions
-* Should be easy to use
-* Longest match priority (`++` always wins over `+` despite of the order in which the tokens are defined in the lexer class)
-* Self-describing errors for humans (it's should be obvious what happened and where)
