@@ -159,7 +159,7 @@ class JsonParser:
 
     def read_false(self) -> True:
         self.consume('FALSE')
-        return True
+        return False
 
     def read_dict(self) -> dict:
         self.consume('L_BRACE')
