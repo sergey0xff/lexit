@@ -4,19 +4,19 @@ from lexit import Lexer, LexerError, Token
 
 
 class JsonLexer(Lexer):
-    NUMBER = r'-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?'
+    NUMBER = r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?"
     STRING = r'"(\\\"|\\\\|[^"\n])*?"i?'
-    L_BRACE = r'{'
-    R_BRACE = r'}'
-    L_BRACKET = r'\['
-    R_BRACKET = r'\]'
-    TRUE = r'true'
-    FALSE = r'false'
-    NULL = r'null'
-    COMMA = r','
-    COLON = r':'
+    L_BRACE = r"{"
+    R_BRACE = r"}"
+    L_BRACKET = r"\["
+    R_BRACKET = r"\]"
+    TRUE = r"true"
+    FALSE = r"false"
+    NULL = r"null"
+    COMMA = r","
+    COLON = r":"
 
-    ignore = r'\s+'
+    ignore = r"\s+"
 
 
 class ParserError(Exception):
@@ -26,7 +26,7 @@ class ParserError(Exception):
 class ExpectedError(Exception):
     def __init__(self, expected_types, token):
         self.expected_types = expected_types
-        self.token = token
+        self.token: Optional[Token] = token
 
 
 def maybe(fn) -> Optional:
@@ -86,28 +86,24 @@ class JsonParser:
         return self.read_value()
 
     def read_value(self) -> VALUE_TYPE:
-        expected = []
+        token_type_to_reader = {
+            "NUMBER": self.read_number,
+            "STRING": self.read_string,
+            "L_BRACKET": self.read_list,
+            "L_BRACE": self.read_dict,
+            "NULL": self.read_null,
+            "TRUE": self.read_true,
+            "FALSE": self.read_false,
+        }
 
-        readers = [
-            self.read_number,
-            self.read_string,
-            self.read_list,
-            self.read_dict,
-            self.read_null,
-            self.read_true,
-            self.read_false
-        ]
+        if not self.token:
+            raise ExpectedError("Expected value got nothing instead", None)
 
-        for reader in readers:
-            try:
-                return reader()
-            except ExpectedError as e:
-                expected += e.expected_types
-
-        if expected:
-            token_type = getattr(self.token, 'type', 'no token')
-            raise ParserError(
-                f'Expected on of {", ".join(expected)}, got {token_type} instead'
+        try:
+            return token_type_to_reader[self.token.type]()
+        except KeyError:
+            raise ExpectedError(
+                f"Expected value, got {self.token.type} instead", self.token
             )
 
     def expect(self, *token_types):
@@ -115,7 +111,7 @@ class JsonParser:
             raise ExpectedError(token_types, self.token)
 
     def read_number(self) -> Union[int, float]:
-        token = self.consume('NUMBER')
+        token = self.consume("NUMBER")
 
         if token.value.isdigit():
             return int(token.value)
@@ -123,58 +119,54 @@ class JsonParser:
         return float(token.value)
 
     def read_string(self) -> str:
-        return self.consume('STRING').value[1:-1]
+        return self.consume("STRING").value[1:-1]
 
     def read_list(self) -> list:
-        self.consume('L_BRACKET')
+        self.consume("L_BRACKET")
 
         rv = []
 
-        while not self.check_token_type('R_BRACKET'):
+        while not self.check_token_type("R_BRACKET"):
             value = self.read_value()
             rv.append(value)
 
             if not maybe(self.read_comma):
                 break
 
-        if not self.check_token_type('R_BRACKET'):
-            raise ParserError(
-                f'Expected "," or "]", got {self.token.type} instead'
-            )
+        if not self.check_token_type("R_BRACKET"):
+            raise ParserError(f'Expected "," or "]", got {self.token.type} instead')
 
         self.advance()
 
         return rv
 
     def read_comma(self):
-        return self.consume('COMMA')
+        return self.consume("COMMA")
 
     def read_null(self) -> None:
-        self.consume('NULL')
+        self.consume("NULL")
         return None
 
     def read_true(self) -> True:
-        self.consume('TRUE')
+        self.consume("TRUE")
         return True
 
     def read_false(self) -> True:
-        self.consume('FALSE')
+        self.consume("FALSE")
         return False
 
     def read_dict(self) -> dict:
-        self.consume('L_BRACE')
+        self.consume("L_BRACE")
 
         rv = {}
 
-        while not self.check_token_type('R_BRACE'):
+        while not self.check_token_type("R_BRACE"):
             key, value = self.read_pair()
             rv[key] = value
             maybe(self.read_comma)
 
-        if not self.check_token_type('R_BRACE'):
-            raise ParserError(
-                f'Expected "," or "}}", got {self.token.type} instead'
-            )
+        if not self.check_token_type("R_BRACE"):
+            raise ParserError(f'Expected "," or "}}", got {self.token.type} instead')
 
         self.advance()
         return rv
@@ -187,7 +179,7 @@ class JsonParser:
         return key, value
 
     def read_colon(self):
-        return self.consume('COLON')
+        return self.consume("COLON")
 
 
 json_text = r"""
@@ -198,6 +190,7 @@ json_text = r"""
     false, 
     null,
     {"hello": "world", "hi": "there"},
+    []
 ]
 """
 
@@ -214,5 +207,5 @@ def main():
     print(repr(parser.parse()))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
