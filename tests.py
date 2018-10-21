@@ -16,7 +16,7 @@ def create_lexer():
         POW = r'\*\*'
         INCR = r'\+\+'
 
-        ignore = '\s+'
+        ignore = r'\s+'
 
     return TestLexer
 
